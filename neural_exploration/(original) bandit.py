@@ -5,20 +5,17 @@ import itertools
 class ContextualBandit():
     def __init__(self,
                  T,
-                 n_arms,                 
-                 n_features,                                  
-                 h,                                                   
-                 noise_std=1.0,                 
-                 n_assortment=1,                 
-                 round_reward_function=sum,
+                 n_arms,
+                 n_features,
+                 h,
+                 noise_std=1.0,
                 ):
         # number of rounds
         self.T = T
         # number of arms
         self.n_arms = n_arms
         # number of features for each arm
-        self.n_features = n_features        
-        
+        self.n_features = n_features
         # average reward function
         # h : R^d -> R
         self.h = h
@@ -26,15 +23,8 @@ class ContextualBandit():
         # standard deviation of Gaussian reward noise
         self.noise_std = noise_std
         
-        # number of assortment (top-K)
-        self.n_assortment = n_assortment                
-        
-        # round reward function
-        self.round_reward_function = round_reward_function                
-        
         # generate random features
         self.reset()
-        
 
     @property
     def arms(self):
@@ -67,15 +57,5 @@ class ContextualBandit():
         ).reshape(self.T, self.n_arms)
 
         # to be used only to compute regret, NOT by the algorithm itself
-        # self.best_rewards_oracle = np.max(self.rewards, axis=1)
-        # self.best_actions_oracle = np.argmax(self.rewards, axis=1)
-        
-        # to be used only to compute regret, NOT by the algorithm itself        
-        a = self.rewards
-        ind = np.argpartition(a, -1*self.n_assortment, axis=1)[:,-1*self.n_assortment:]        
-        s_ind = np.array([list(ind[i][np.argsort(a[i][ind[i]])][::-1]) for i in range(0, np.shape(a)[0])])
-        
-        self.best_super_arm = s_ind
-        self.best_rewards = np.array([a[i][s_ind[i]] for i in range(0,np.shape(a)[0])])
-        self.best_round_reward = self.round_reward_function(self.best_rewards)
-        
+        self.best_rewards_oracle = np.max(self.rewards, axis=1)
+        self.best_actions_oracle = np.argmax(self.rewards, axis=1)

@@ -48,13 +48,11 @@ class LinUCB(UCB):
         self.reset_grad_approx()
         self.iteration = 0
 
-        # randomly initialize linear predictors within their bounds
-        ## --
-        self.theta = np.random.uniform(-1, 1, self.bandit.n_features) * self.bound_theta
-        ## self.theta = np.random.uniform(-1, 1, (self.bandit.n_arms, self.bandit.n_features)) * self.bound_theta # for disjoint model
+        # randomly initialize linear predictors within their bounds        
+        self.theta = np.random.uniform(-1, 1, (self.bandit.n_arms, self.bandit.n_features)) * self.bound_theta
         
         # initialize reward-weighted features sum at zero
-        self.b = np.zeros(self.bandit.n_features)
+        self.b = np.zeros((self.bandit.n_arms, self.bandit.n_features))
 
     @property
     def confidence_multiplier(self):
@@ -67,27 +65,18 @@ class LinUCB(UCB):
     def train(self):
         """Update linear predictor theta.
         """
-        ## --
-        self.theta = np.matmul(self.A_inv, self.b)                      
-        self.b += np.sum(np.array(\
-                                  [ self.bandit.rewards[self.iteration][i]*self.bandit.features[self.iteration, self.action][i] \
-                                   for i in range(0, self.bandit.n_assortment) ] \
-                                 ), axis = 0)              
-        
-        ##self.theta = np.array(
-        ##    [
-        ##        np.matmul(self.A_inv[a], self.b[a]) for a in self.bandit.arms
-        ##    ]
-        ##)
-
-        ## self.b += self.bandit.features[self.iteration, self.action]*self.bandit.rewards[self.iteration, self.action]
-        
-    
+                
+        self.theta = np.array(
+            [
+                np.matmul(self.A_inv[a], self.b[a]) for a in self.bandit.arms
+            ]
+        )        
+            
     def predict(self):
         """Predict reward.
         """
         self.mu_hat[self.iteration] = np.array(
             [
-                np.dot(self.bandit.features[self.iteration, a], self.theta) for a in self.bandit.arms
+                np.dot(self.bandit.features[self.iteration, a], self.theta[a]) for a in self.bandit.arms
             ]
         )

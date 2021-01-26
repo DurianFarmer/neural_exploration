@@ -103,17 +103,10 @@ class NeuralUCB(UCB):
         """Train neural approximator.
         """
         iterations_so_far = range(np.max([0, self.iteration-self.training_window]), self.iteration+1)
-        actions_so_far = self.actions[np.max([0, self.iteration-self.training_window]):self.iteration+1] # this is a matrix
-        
-        ## --
-        temp = np.array([self.bandit.features[t, actions_so_far[i]] for i, t in enumerate(iterations_so_far)])
-        x_train = torch.FloatTensor(np.reshape(temp, (1,-1,self.bandit.n_features)).squeeze()).to(self.device)
-        
-        temp = np.array([self.bandit.rewards[t, actions_so_far[i]] for i, t in enumerate(iterations_so_far)])
-        y_train = torch.FloatTensor(np.reshape(temp, (1,-1)).squeeze()).to(self.device)
-        
-        #x_train = torch.FloatTensor(self.bandit.features[iterations_so_far, actions_so_far]).to(self.device)        
-        #y_train = torch.FloatTensor(self.bandit.rewards[iterations_so_far, actions_so_far]).squeeze().to(self.device)
+        actions_so_far = self.actions[np.max([0, self.iteration-self.training_window]):self.iteration+1]
+
+        x_train = torch.FloatTensor(self.bandit.features[iterations_so_far, actions_so_far]).to(self.device)
+        y_train = torch.FloatTensor(self.bandit.rewards[iterations_so_far, actions_so_far]).squeeze().to(self.device)
         
         # train mode
         self.model.train()

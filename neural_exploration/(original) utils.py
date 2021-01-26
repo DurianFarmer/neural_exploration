@@ -7,19 +7,7 @@ def inv_sherman_morrison(u, A_inv):
     """
     Au = np.dot(A_inv, u)
     A_inv -= np.outer(Au, Au)/(1+np.dot(u.T, Au))
-    return A_inv
-
-## --
-def inv_sherman_morrison_iter(a, A_inv):
-    """Inverse of a matrix for combinatorial case.
-    """
-    temp = A_inv
-    ## print('temp', np.shape(temp))
-    ## temp = np.squeeze(A_inv, axis=0)
-    for u in a:                     
-        Au = np.dot(temp, u)
-        temp = temp - np.outer(Au, Au)/(1+np.dot(u.T, Au))    
-    return temp       
+    return A_inv       
 
 class Model(nn.Module):
     """Template for fully connected neural network for scalar approximation.

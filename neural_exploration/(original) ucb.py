@@ -2,7 +2,7 @@ import numpy as np
 import abc
 from tqdm import tqdm
 
-from .utils import inv_sherman_morrison_iter
+from .utils import inv_sherman_morrison
 
 class UCB(abc.ABC):
     """Base class for UBC methods.
@@ -47,21 +47,19 @@ class UCB(abc.ABC):
         self.regrets = np.empty(self.bandit.T)
 
     def reset_actions(self):
-        """Initialize cache of actions (playing super arms).
+        """Initialize cache of actions.
         """
-        ## --
-        self.actions = np.empty((self.bandit.T, self.bandit.n_assortment)).astype('int')        
+        self.actions = np.empty(self.bandit.T).astype('int')
     
     def reset_A_inv(self):
         """Initialize n_arms square matrices representing the inverses
         of exploration bonus matrices.
         """
-        self.A_inv = np.eye(self.approximator_dim)/self.reg_factor
-        #self.A_inv = np.array(
-        #    [
-        #        np.eye(self.approximator_dim)/self.reg_factor for _ in self.bandit.arms
-        #    ]
-        #)
+        self.A_inv = np.array(
+            [
+                np.eye(self.approximator_dim)/self.reg_factor for _ in self.bandit.arms
+            ]
+        )
     
     def reset_grad_approx(self):
         """Initialize the gradient of the approximator w.r.t its parameters.
@@ -69,14 +67,9 @@ class UCB(abc.ABC):
         self.grad_approx = np.zeros((self.bandit.n_arms, self.approximator_dim))
 
     def sample_action(self):
-        """Return the action (super arm) to play based on current estimates
+        """Return the action to play based on current estimates
         """
-        ## --
-        a = self.upper_confidence_bounds[self.iteration]
-        ind = np.argpartition(a, -1*self.bandit.n_assortment)[-1*self.bandit.n_assortment:]
-        s_ind = ind[np.argsort(a[ind])][::-1].astype('int')
-        return s_ind
-        # return np.argmax(self.upper_confidence_bounds[self.iteration]).astype('int')
+        return np.argmax(self.upper_confidence_bounds[self.iteration]).astype('int')
 
     @abc.abstractmethod
     def reset(self):
@@ -135,14 +128,9 @@ class UCB(abc.ABC):
         # UCB exploration bonus
         self.exploration_bonus[self.iteration] = np.array(
             [
-                self.confidence_multiplier * np.sqrt(np.dot(self.grad_approx[a], np.dot(self.A_inv, self.grad_approx[a].T))) for a in self.bandit.arms
+                self.confidence_multiplier * np.sqrt(np.dot(self.grad_approx[a], np.dot(self.A_inv[a], self.grad_approx[a].T))) for a in self.bandit.arms
             ]
         )
-        #self.exploration_bonus[self.iteration] = np.array(
-        #    [
-        #        self.confidence_multiplier * np.sqrt(np.dot(self.grad_approx[a], np.dot(self.A_inv[a], self.grad_approx[a].T))) for a in self.bandit.arms
-        #    ]
-        #)
         
         # update reward prediction mu_hat
         self.predict()
@@ -151,53 +139,41 @@ class UCB(abc.ABC):
         self.upper_confidence_bounds[self.iteration] = self.mu_hat[self.iteration] + self.exploration_bonus[self.iteration]
         
     def update_A_inv(self):
-        ##
-        self.A_inv = inv_sherman_morrison_iter(
+        self.A_inv[self.action] = inv_sherman_morrison(
             self.grad_approx[self.action],
-            self.A_inv
+            self.A_inv[self.action]
         )
-        
-        # self.A_inv[self.action] = inv_sherman_morrison(
-        #    self.grad_approx[self.action],
-        #    self.A_inv[self.action]
-        #)
         
     def run(self):
         """Run an episode of bandit.
         """
         postfix = {
             'total regret': 0.0,
-            '% optimal super arm': 0.0,
+            '% optimal arm': 0.0,
         }
         with tqdm(total=self.bandit.T, postfix=postfix) as pbar:
             for t in range(self.bandit.T):
                 # update confidence of all arms based on observed features at time t
                 self.update_confidence_bounds()
-                # pick action (super arm) with the highest boosted estimated reward
-                self.action = self.sample_action()                
+                # pick action with the highest boosted estimated reward
+                self.action = self.sample_action()
                 self.actions[t] = self.action
                 # update approximator
                 if t % self.train_every == 0:
                     self.train()
                 # update exploration indicator A_inv
                 self.update_A_inv()
-                
-                ## compute regret
-                self.regrets[t] = self.bandit.best_round_reward[t] - self.bandit.round_reward_function(self.bandit.rewards[t, self.action])
-                ## self.regrets[t] = self.bandit.best_round_reward[t]-self.bandit.rewards[t, self.action]
-                
+                # compute regret
+                self.regrets[t] = self.bandit.best_rewards_oracle[t]-self.bandit.rewards[t, self.action]
                 # increment counter
                 self.iteration += 1
                 
                 # log
                 postfix['total regret'] += self.regrets[t]
                 n_optimal_arm = np.sum(
-                    np.prod(
-                        (self.actions[:self.iteration]==self.bandit.best_super_arm[:self.iteration])*1, 
-                        axis=1)                                      
-                    ## self.actions[:self.iteration]==self.bandit.best_actions_oracle[:self.iteration]
+                    self.actions[:self.iteration]==self.bandit.best_actions_oracle[:self.iteration]
                 )
-                postfix['% optimal super arm'] = '{:.2%}'.format(n_optimal_arm / self.iteration)
+                postfix['% optimal arm'] = '{:.2%}'.format(n_optimal_arm / self.iteration)
                 
                 if t % self.throttle == 0:
                     pbar.set_postfix(postfix)
