@@ -39,7 +39,9 @@ class Model(nn.Module):
             self.layers = [nn.Linear(input_size, 1)]
         else:
             size  = [input_size] + [hidden_size,] * (self.n_layers-1) + [1]
-            self.layers = [nn.Linear(size[i], size[i+1]) for i in range(self.n_layers)]
+            ##
+            self.layers = [nn.Linear(size[i], size[i+1], bias=False) \
+                           for i in range(self.n_layers)]
         self.layers = nn.ModuleList(self.layers)
         
         # dropout layer
@@ -54,9 +56,16 @@ class Model(nn.Module):
             self.activation = nn.LeakyReLU(negative_slope=0.1)
         else:
             raise Exception('{} not an available activation'.format(activation))
+        
+        ## initial parameters
+        self.initial_parameters = self.parameters()
             
     def forward(self, x):
         for i in range(self.n_layers-1):
             x = self.dropout(self.activation(self.layers[i](x)))
         x = self.layers[-1](x)
         return x
+    
+    ##
+    def get_initial_parameters(self):
+        return self.initial_parameters

@@ -51,7 +51,9 @@ class NeuralUCB(UCB):
                            n_layers=self.n_layers,
                            p=self.p
                           ).to(self.device)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
+        ## self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, weight_decay=self.reg_factor)
+        ## self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
         super().__init__(bandit, 
                          reg_factor=reg_factor,
@@ -119,7 +121,8 @@ class NeuralUCB(UCB):
         self.model.train()
         for _ in range(self.epochs):
             y_pred = self.model.forward(x_train).squeeze()
-            loss = nn.MSELoss()(y_train, y_pred)
+            loss = nn.MSELoss(reduction='sum')(y_train, y_pred)/2
+            ## loss = nn.MSELoss()(y_train, y_pred)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()

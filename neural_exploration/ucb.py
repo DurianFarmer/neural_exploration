@@ -178,7 +178,9 @@ class UCB(abc.ABC):
                 self.actions[t] = self.action
                 # update approximator
                 if t % self.train_every == 0:
-                    self.train() # train the neural network for eac "self.train_every" period
+                    # train the neural network for each "self.train_every" period
+                    # for linear, train each round ("self.train_every" is 1)
+                    self.train() 
                 # update exploration indicator A_inv
                 self.update_A_inv()
                 
