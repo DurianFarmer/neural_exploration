@@ -56,16 +56,9 @@ class Model(nn.Module):
             self.activation = nn.LeakyReLU(negative_slope=0.1)
         else:
             raise Exception('{} not an available activation'.format(activation))
-        
-        ## initial parameters
-        self.initial_parameters = self.parameters()
-            
+                    
     def forward(self, x):
         for i in range(self.n_layers-1):
             x = self.dropout(self.activation(self.layers[i](x)))
         x = self.layers[-1](x)
-        return x
-    
-    ##
-    def get_initial_parameters(self):
-        return self.initial_parameters
+        return x       

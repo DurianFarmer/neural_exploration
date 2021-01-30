@@ -104,6 +104,17 @@ class NeuralTS(TS):
         self.reset_grad_approx()
         self.iteration = 0
 
+    ##
+    def get_param(self, parameters):
+        a = torch.empty(1)
+        for p in parameters:
+            a = torch.cat((a, p.data.flatten()))
+        return a[1:]
+    
+    ##
+    def set_init_param(self, parameters):
+        self.init_param = self.param_to_tensor(parameters)
+        
     def train(self):
         """Train neural approximator.
         """
@@ -121,15 +132,14 @@ class NeuralTS(TS):
         self.model.train()
         for _ in range(self.epochs):
             y_pred = self.model.forward(x_train).squeeze()
-            loss = nn.MSELoss(reduction='sum')(y_train, y_pred)/2
+            ##
+            param_diff = np.linalg.norm( self.param_to_tensor(self.model.parameters()) - self.init_param )
+            loss = nn.MSELoss(reduction='sum')(y_train, y_pred)/2 + (self.reg_factor*self.hidden_size*param_diff**2)/2
             ## loss = nn.MSELoss()(y_train, y_pred)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            
-            
-        
-        
+                                        
     def predict(self):
         """Predict reward.
         """
@@ -137,4 +147,5 @@ class NeuralTS(TS):
         self.model.eval()
         self.mu_hat[self.iteration] = self.model.forward(
             torch.FloatTensor(self.bandit.features[self.iteration]).to(self.device)
-        ).detach().squeeze()
+        ).detach().squeeze()    
+        
