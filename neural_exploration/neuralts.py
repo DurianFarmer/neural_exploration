@@ -105,12 +105,12 @@ class NeuralTS(TS):
         self.iteration = 0
 
     ##
-    def get_param(self, parameters):
+    def param_to_tensor(self, parameters):
         a = torch.empty(1)
         for p in parameters:
             a = torch.cat((a, p.data.flatten()))
         return a[1:]
-    
+   
     ##
     def set_init_param(self, parameters):
         self.init_param = self.param_to_tensor(parameters)
